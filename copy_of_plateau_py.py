@@ -54,21 +54,22 @@ class Joueur():
 	
 
 	def __init__(self,couleur_j):
-		# if couleur_j == "bleu":
-		# 	self.valeur = 1
-		# else:
-		# 	self.valeur=-1	
-		self.valeur =1 if couleur_j=="blue" else -1
+		if couleur_j == "bleu":
+			self.valeur = 1
+		else:
+			self.valeur=-1	
+ 
+  
 	
-	def play(self,pl):
+	def play(self,pl, grille):
 		# print("play1")
 		liste=[] #Tous les coups (colonnes) possibles 
-		for i in range(pl.c): #Parcourir toutes les colonnes 
-			if pl.grille[0][i]== 0: #Verifier si la colonne est valable 
-				liste.append(i)
-		return liste[randint(0,len(liste)-1)]
+    #Parcourir toutes les colonnes : Pourquoi Tjs la colonne 0
+		for i in range(grille.shape[1]):
+				if 0 in grille.transpose()[i]: #Verifier si la colonne est valable 
+					liste.append(i)
+		return int(randint(0,len(liste)-1))
 
- 
 class Plateau():
 	
 
@@ -82,36 +83,36 @@ class Plateau():
 	def reset(self, l, c):
 		self.grille=np.zeros((l, c), dtype=int)
 
-	def has_won(self, jVal): 
+	def has_won(self, jVal, grille): 
 		# print("has won")
 		#J represente le joueur 1 ou -1 
 		#Parourir la liste des coordonees dans la liste quad
 		for i,j,k,z in self.quad:
-			a,b,e,d = self.grille[i], self.grille[j], self.grille[k], self.grille[z]
+			a,b,e,d =  grille[i],  grille[j],  grille[k], grille[z]
 			if a==b==e==d==jVal:
 				return True
 		return False
 
 
-	def play(self, x, jVal): # j'ai remplcé  joueur  par jVal
+	def play(self, x, jVal, grille): # j'ai remplcé  joueur  par jVal
 		# print("play 2")
-		for i in range(self.l - 1, 0, -1):
-			if self.grille[i][x]==0:
-				self.grille[i][x]= jVal 
+		for i in range(self.l - 1, -1, -1):
+			if grille[i][int(x)]==0:
+				grille[i][int(x)]= jVal 
 				break
 
-	def is_finished(self, jVal):
+	def is_finished(self, jVal, grille):
 		# print("is_finished")
-		if self.has_won(jVal) or self.has_won(-jVal):
+		if self.has_won(jVal, grille) or self.has_won(-jVal, grille):
 			return True 
-		elif np.prod(np.array(self.grille))==0:  
+		elif np.prod(np.array(grille))==0:  
 			# le Produit de tous les éléments de la grille à la recherche d'a Zéro
 			return False
 		return True #personne n'a gagne et on ne peut pas continuer a jouer
 
 	def run(self, jVal):
 
-		fini= self.is_finished(1) 
+		fini= self.is_finished(1, self.grille) 
 		# print(fini)
 		j1= Joueur("bleu")
 		j2= Joueur("rouge")
@@ -129,14 +130,14 @@ class Plateau():
 				self.play(col, -1) #Le joueur j1 joue 
 				nb_coups_j2+=1 #Nombre déssayes augmente		
 			cpt+=1 	
-			fini= self.is_finished(1) #Verifier si le jeu est fini 
+			fini= self.is_finished(1, self.grille) #Verifier si le jeu est fini 
 				
 		#Fin du while 
 
 		#Verifier lequel des joeueur a gagné 
-		if self.has_won(1):
+		if self.has_won(1, self.grille):
 			return (1,nb_coups_j1) 
-		elif self.has_won(-1): 
+		elif self.has_won(-1, self.grille): 
 			return (-1,nb_coups_j2)
 		else: 
 			return (0,0)
@@ -168,12 +169,14 @@ class Monte_Carlo():
 
   def __init__(self, joueur): #Joueur est un objet de la classe Joueur 
     self.joueur=joueur
+				
 
-  def Monte_Carlo_Moteur(self, etat, col, adv):
+  def Monte_Carlo_Moteur(self, etat, col, adv, grid):
     #monte - carlo joue la colonne col 
-    etat.play(col, self.joueur.valeur)
+    
+    etat.play(col, self.joueur.valeur, grid)
     cpt=1
-    while(not etat.is_finished(self.joueur.valeur)):#Verifier si le jeu est terminé 
+    while(not etat.is_finished(self.joueur.valeur, grid)):#Verifier si le jeu est terminé 
       # if cpt==0: #La colonnes passée en argument est utilisée 
       #   if cpt%2 == 0: #Le premier joueur joue 
       #     etat.play(col, joueur)
@@ -183,29 +186,30 @@ class Monte_Carlo():
       if cpt%2 == 0: #Le premier joueur joue 
         # etat.play(col1, joueur.valeur)
         # col1=joueur.play(etat)
-        col= self.joueur.play(etat) #Determiner la colonne choisie par le joueur 1
-        etat.play(col, self.joueur.valeur) #Le joueur j1 joue 
+        col= self.joueur.play(etat, grid) #Determiner la colonne choisie par le joueur 1
+        etat.play(col, self.joueur.valeur, grid) #Le joueur j1 joue 
       else:
         # etat.play(col2, adv.valeur)
         # col2=adv.play(etat)
-        col= adv.play(etat) #Determiner la colonne choisie par le joueur 1
-        etat.play(col, adv.valeur) #Le joueur j1 joue
+        col= adv.play(etat, grid) #Determiner la colonne choisie par le joueur 1
+        etat.play(col, adv.valeur, grid) #Le joueur j1 joue
       cpt+=1 
-    if etat.has_won(self.joueur.valeur) or etat.has_won(adv.valeur):#Si au moins un des deux a gagné, on ajoute le nombre de coups pour cette colonne
+    if etat.has_won(self.joueur.valeur, grid) or etat.has_won(adv.valeur, grid):#Si au moins un des deux a gagné, on ajoute le nombre de coups pour cette colonne
       return cpt 
     return 0
 
-  def Monte_Carlo_Play(self, etat, N):
+  def Monte_Carlo_Play(self, pl, N):
     """ trouver la meilleure colonne a jouer """
-    adv= Joueur("bleu") #Instanciation du joueur adversaire pour faire la simulation du jeu 
+    adv= Joueur("rouge") #Instanciation du joueur adversaire pour faire la simulation du jeu 
     #Recompense de l'action choisie
     lst=[]
     # for col in (0, etat.c):
       # lst.append((col, 0,0)) #Stocker dans un tuple: la colonne, le nombre de coups et le nombre de fois que la colonne a été choisi 
-
+    
     for i in range(N):
+      grid=pl.grille.copy()
       #cpt=0 #le nombre de coups avant que l'un des deux joueurs gagne pour une colonne choisi
-      col= randint(0, etat.c - 1) #Choisir une colonne aleatoire
+      col= randint(0, pl.c - 1) #Choisir une colonne aleatoire
       # while(not etat.is_finished(joueur, adversaire)):#Verifier si le jeu est terminé 
       #   if cpt%2 == 0: #Le premier joueur joue 
       #     etat.play(colonne, joueur)
@@ -213,7 +217,7 @@ class Monte_Carlo():
       #     etat.play(colonne, adversaire)
       #   cpt+=1
 
-      cpt= self.Monte_Carlo_Moteur(etat, col, adv)
+      cpt= self.Monte_Carlo_Moteur(pl, col, adv, grid)
       # Nbre de coup qui a abouti à un Gain ou Pas
       #A la sortie du while, le jeux est terminé 
       if cpt>0: #Si au moins des deux a gagné, on ajoute le nombre de coups pour cette colonne 
@@ -236,14 +240,16 @@ class Monte_Carlo():
     # ll=np.array(
     #     pd.DataFrame(lst, colnames=["ind", "occ"]).groupby("ind").agg("mean"))
 
-    #Trouver a meilleure 
+    #Trouver a meilleure   Min Or Max?
     Best_col= max(lst, key=lambda x:x[1])
     return Best_col[0]
+
+
 
   def run_Monte_carlo(self, Joueur_Ad, pl, nb, is_alea):
     """ Fonction d'un jeu entre un joueur monte_carlo et un autre joueur (monte_caro ou aleatoire) qui renvoie le 
         joueur gagna avec le nombre de coups """
-    finish= pl.is_finished(self.joueur.valeur)
+    finish= pl.is_finished(self.joueur.valeur, pl.grille)
     cp=0 #Compteur pour alterner entre joueur 1 et 2 
     nb_coupsj1=0 
     nb_coupsj2=0
@@ -253,36 +259,36 @@ class Monte_Carlo():
 
       if cp%2==0: #Le joueur monte carlo joue 
         col= self.Monte_Carlo_Play(pl, nb) #La meilleure colonne est choisie 
-        pl.play(col, self.joueur.valeur) #Le joueur joue 
+        pl.play(col, self.joueur.valeur, pl.grille) #Le joueur joue 
         nb_coupsj1+=1
       elif is_alea: #Si le joueur adversaire est un joueur aleatoire 
         #Determiner dans quelle colonnes le joueur aleatoire va jouer en utilisant la fonction play dans la classe Joueur  
-        col= Joueur_Ad.play(pl) 
-        pl.play(col, Joueur_Ad.valeur) 
+        col= Joueur_Ad.play(pl, pl.grille) 
+        pl.play(col, Joueur_Ad.valeur, pl.grille) 
         nb_coupsj2+=1
       else: #Jouer contre un joueur monte carlo 
         col= Joueur_Ad.Monte_Carlo_Play(pl, nb)
-        pl.play(col, Joueur_Ad.valeur)
+        pl.play(col, Joueur_Ad.valeur, pl.grille)
         nb_coupsj2+=1
       cp+=1
-      finish= pl.is_finished(self.joueur.valeur)
+      finish= pl.is_finished(self.joueur.valeur, pl.grille)
 
 		#Verifeir lequel des joeueur a gagné 
-    if pl.has_won(self.joueur.valeur): 
-      return (self.joueur.valeur,nb_coups_j1) 
-    elif pl.has_won(Joueur_Ad.valeur): 
-      return (Joueur_Ad.valeur,nb_coups_j2)
+    if pl.has_won(self.joueur.valeur, pl.grille): 
+      return (self.joueur.valeur,nb_coupsj1) 
+    elif pl.has_won(Joueur_Ad.valeur, pl.grille): 
+      return (Joueur_Ad.valeur,nb_coupsj2)
     return (0,0)
 
 # Test pour un joeur Monte_Carlo contre lui meme
 
 # Instanciation du joueur Monte_carlo 
 
-j1= Joueur("bleu") #Le joueur Monte_carlo 
+j1= Joueur("bleu") #Le joueur Monte_carlo blue
 #Instatiation monte_carlo 
 mc= Monte_Carlo(j1)
 
-p= Plateau(3,3) #Initialisation du plateau vide au debut 
+p= Plateau(6,7) #Initialisation du plateau vide au debut 
 for k in range(30):
   mc.run_Monte_carlo(j1, p, 20, False)
 
